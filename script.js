@@ -21,7 +21,9 @@ minimizeBtn.addEventListener('click', () => {
     
     // Restaurer le focus sur l'input après maximisation
     if (!chatBubble.classList.contains('minimized')) {
-        setTimeout(() => chatInput.focus(), FOCUS_RESTORE_DELAY);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => chatInput.focus());
+        });
     }
 });
 
@@ -31,19 +33,23 @@ minimizeBtn.addEventListener('click', () => {
  * @param {boolean} isUser - Indique si le message vient de l'utilisateur
  */
 function addMessage(message, isUser = false) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-    
-    const messageP = document.createElement('p');
-    messageP.textContent = message;
-    
-    messageDiv.appendChild(messageP);
-    chatMessages.appendChild(messageDiv);
-    
-    // Limiter l'historique des messages
-    limitMessageHistory();
-    
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    try {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+        
+        const messageP = document.createElement('p');
+        messageP.textContent = message;
+        
+        messageDiv.appendChild(messageP);
+        chatMessages.appendChild(messageDiv);
+        
+        // Limiter l'historique des messages
+        limitMessageHistory();
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout du message:', error);
+    }
 }
 
 /**
@@ -51,12 +57,16 @@ function addMessage(message, isUser = false) {
  * pour maintenir la performance et éviter les problèmes de mémoire
  */
 function limitMessageHistory() {
-    const messages = chatMessages.querySelectorAll('.message');
-    if (messages.length >= MAX_MESSAGE_HISTORY) {
-        const messagesToRemove = messages.length - MAX_MESSAGE_HISTORY + 1;
-        for (let i = 0; i < messagesToRemove; i++) {
-            messages[i].remove();
+    try {
+        const messages = chatMessages.querySelectorAll('.message');
+        if (messages.length > MAX_MESSAGE_HISTORY) {
+            const messagesToRemove = messages.length - MAX_MESSAGE_HISTORY;
+            for (let i = 0; i < messagesToRemove; i++) {
+                messages[i].remove();
+            }
         }
+    } catch (error) {
+        console.error('Erreur lors de la limitation de l\'historique:', error);
     }
 }
 
