@@ -26,6 +26,7 @@ JAUNE = (255, 255, 0)
 VIOLET = (255, 0, 255)
 ORANGE = (255, 165, 0)
 MARRON = (139, 69, 19)
+GRIS = (60, 60, 60)
 
 # Directions
 HAUT = (0, -1)
@@ -35,22 +36,27 @@ DROITE = (1, 0)
 
 
 class Snake:
+    # Constantes d'animation (éviter les magic numbers)
+    VITESSE_ANIMATION = 0.25  # cycles par seconde
+    DELTA_COULEUR = 0.10      # espacement de teinte entre segments
+    AFFICHER_CONTOUR = True   # contour optionnel pour la lisibilité
     def __init__(self):
         self.positions = [(COLONNES // 2, LIGNES // 2)]
         self.direction = DROITE
         self.grandir = False
         
-    def _couleur_arc_en_ciel(self, index_segment: int) -> tuple:
+    def _couleur_arc_en_ciel(self, index_segment: int, current_time: float | None = None) -> tuple:
         """Retourne une couleur arc‑en‑ciel (RGB) pour un segment.
         L'effet est animé dans le temps et décalé par segment.
         """
         # Décalage temporel pour l'animation (secondes)
-        t = pygame.time.get_ticks() / 1000.0
+        if current_time is None:
+            current_time = pygame.time.get_ticks() / 1000.0
         # Vitesse de rotation des couleurs (cycles par seconde)
-        vitesse = 0.25
+        vitesse = self.VITESSE_ANIMATION
         # Espacement de teinte entre segments
-        delta = 0.10  # 0.0–1.0
-        hue = (index_segment * delta + t * vitesse) % 1.0
+        delta = self.DELTA_COULEUR  # 0.0–1.0
+        hue = (index_segment * delta + current_time * vitesse) % 1.0
         r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
         return (int(r * 255), int(g * 255), int(b * 255))
         
@@ -85,41 +91,57 @@ class Snake:
         self.grandir = True
         
     def dessiner(self, ecran):
+        # Cache la valeur temporelle pour cette frame
+        current_time = pygame.time.get_ticks() / 1000.0
         for i, position in enumerate(self.positions):
             x = position[0] * TAILLE_CELLULE
             y = position[1] * TAILLE_CELLULE
-            couleur = self._couleur_arc_en_ciel(i)
+            couleur = self._couleur_arc_en_ciel(i, current_time)
             # Dessin principal
             pygame.draw.rect(ecran, couleur, (x, y, TAILLE_CELLULE, TAILLE_CELLULE))
-            # Optionnel: léger contour pour mieux voir les couleurs sur fond sombre
-            pygame.draw.rect(ecran, NOIR, (x, y, TAILLE_CELLULE, TAILLE_CELLULE), 1)
+            # Contour optionnel en gris pour contraster avec le fond noir
+            if self.AFFICHER_CONTOUR:
+                pygame.draw.rect(ecran, GRIS, (x, y, TAILLE_CELLULE, TAILLE_CELLULE), 1)
 
 
 class Nourriture:
+    # Constantes pour la banane
+    BANANE_ANGLE_DEBUT = 0.7  # radians
+    BANANE_ANGLE_FIN = 2.4    # radians
+    BANANE_EPAISSEUR = 5
+    BANANE_TIP_RAYON = 2
     def __init__(self):
         self.position = None
+        # Sprite banane pré‑rendu pour éviter une recréation à chaque frame
+        self.sprite_banane = self._creer_sprite_banane()
         self.generer()
         
     def generer(self):
         self.position = (random.randint(0, COLONNES - 1), 
                         random.randint(0, LIGNES - 1))
     
-    def dessiner(self, ecran):
-        # Dessiner une banane stylisée (arc jaune avec petites extrémités marron)
-        x = self.position[0] * TAILLE_CELLULE
-        y = self.position[1] * TAILLE_CELLULE
-        surf = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA)
-        # Arc de banane
+    def _creer_sprite_banane(self):
+        surf = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA).convert_alpha()
         rect_arc = pygame.Rect(2, 2, TAILLE_CELLULE - 4, TAILLE_CELLULE - 4)
-        start_angle = 0.7  # radians
-        end_angle = 2.4    # radians
-        pygame.draw.arc(surf, JAUNE, rect_arc, start_angle, end_angle, 5)
-        # Petites extrémités (pédoncules)
+        pygame.draw.arc(
+            surf,
+            JAUNE,
+            rect_arc,
+            self.BANANE_ANGLE_DEBUT,
+            self.BANANE_ANGLE_FIN,
+            self.BANANE_EPAISSEUR,
+        )
         tip1 = (rect_arc.left + 3, rect_arc.bottom - 6)
         tip2 = (rect_arc.right - 3, rect_arc.top + 6)
-        pygame.draw.circle(surf, MARRON, tip1, 2)
-        pygame.draw.circle(surf, MARRON, tip2, 2)
-        ecran.blit(surf, (x, y))
+        pygame.draw.circle(surf, MARRON, tip1, self.BANANE_TIP_RAYON)
+        pygame.draw.circle(surf, MARRON, tip2, self.BANANE_TIP_RAYON)
+        return surf
+    
+    def dessiner(self, ecran):
+        # Afficher la banane pré‑rendue
+        x = self.position[0] * TAILLE_CELLULE
+        y = self.position[1] * TAILLE_CELLULE
+        ecran.blit(self.sprite_banane, (x, y))
 
 
 class Bonus:
