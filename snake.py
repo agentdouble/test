@@ -3,6 +3,7 @@ import random
 import sys
 import time
 import colorsys
+import math
 
 # Initialisation de Pygame
 pygame.init()
@@ -24,6 +25,7 @@ BLEU = (0, 0, 255)
 JAUNE = (255, 255, 0)
 VIOLET = (255, 0, 255)
 ORANGE = (255, 165, 0)
+MARRON = (139, 69, 19)
 
 # Directions
 HAUT = (0, -1)
@@ -103,9 +105,21 @@ class Nourriture:
                         random.randint(0, LIGNES - 1))
     
     def dessiner(self, ecran):
+        # Dessiner une banane stylisée (arc jaune avec petites extrémités marron)
         x = self.position[0] * TAILLE_CELLULE
         y = self.position[1] * TAILLE_CELLULE
-        pygame.draw.rect(ecran, ROUGE, (x, y, TAILLE_CELLULE, TAILLE_CELLULE))
+        surf = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA)
+        # Arc de banane
+        rect_arc = pygame.Rect(2, 2, TAILLE_CELLULE - 4, TAILLE_CELLULE - 4)
+        start_angle = 0.7  # radians
+        end_angle = 2.4    # radians
+        pygame.draw.arc(surf, JAUNE, rect_arc, start_angle, end_angle, 5)
+        # Petites extrémités (pédoncules)
+        tip1 = (rect_arc.left + 3, rect_arc.bottom - 6)
+        tip2 = (rect_arc.right - 3, rect_arc.top + 6)
+        pygame.draw.circle(surf, MARRON, tip1, 2)
+        pygame.draw.circle(surf, MARRON, tip2, 2)
+        ecran.blit(surf, (x, y))
 
 
 class Bonus:
