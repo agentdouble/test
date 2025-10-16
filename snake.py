@@ -2,6 +2,7 @@ import pygame
 import random
 import sys
 import time
+import colorsys
 
 # Initialisation de Pygame
 pygame.init()
@@ -37,6 +38,20 @@ class Snake:
         self.direction = DROITE
         self.grandir = False
         
+    def _couleur_arc_en_ciel(self, index_segment: int) -> tuple:
+        """Retourne une couleur arc‑en‑ciel (RGB) pour un segment.
+        L'effet est animé dans le temps et décalé par segment.
+        """
+        # Décalage temporel pour l'animation (secondes)
+        t = pygame.time.get_ticks() / 1000.0
+        # Vitesse de rotation des couleurs (cycles par seconde)
+        vitesse = 0.25
+        # Espacement de teinte entre segments
+        delta = 0.10  # 0.0–1.0
+        hue = (index_segment * delta + t * vitesse) % 1.0
+        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+        return (int(r * 255), int(g * 255), int(b * 255))
+        
     def bouger(self):
         tete = self.positions[0]
         nouvelle_tete = (tete[0] + self.direction[0], tete[1] + self.direction[1])
@@ -71,8 +86,11 @@ class Snake:
         for i, position in enumerate(self.positions):
             x = position[0] * TAILLE_CELLULE
             y = position[1] * TAILLE_CELLULE
-            couleur = VERT if i == 0 else BLEU
+            couleur = self._couleur_arc_en_ciel(i)
+            # Dessin principal
             pygame.draw.rect(ecran, couleur, (x, y, TAILLE_CELLULE, TAILLE_CELLULE))
+            # Optionnel: léger contour pour mieux voir les couleurs sur fond sombre
+            pygame.draw.rect(ecran, NOIR, (x, y, TAILLE_CELLULE, TAILLE_CELLULE), 1)
 
 
 class Nourriture:
