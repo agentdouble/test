@@ -111,7 +111,7 @@ class Snake:
     def __init__(self):
         self.positions = [(COLONNES // 2, LIGNES // 2)]
         self.direction = DROITE
-        self.grandir = False
+        self.grandir_restants = 0
         
     def _couleur_arc_en_ciel(self, index_segment: int, current_time: float | None = None) -> tuple:
         """Retourne une couleur arc‑en‑ciel (RGB) pour un segment.
@@ -149,11 +149,11 @@ class Snake:
             return False
             
         self.positions.insert(0, nouvelle_tete)
-        
-        if not self.grandir:
-            self.positions.pop()
+
+        if self.grandir_restants > 0:
+            self.grandir_restants -= 1
         else:
-            self.grandir = False
+            self.positions.pop()
             
         return True
     
@@ -163,7 +163,7 @@ class Snake:
             self.direction = nouvelle_direction
     
     def manger(self):
-        self.grandir = True
+        self.grandir_restants += 3
         
     def dessiner(self, ecran):
         # Cache la valeur temporelle pour cette frame
