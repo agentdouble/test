@@ -10,5 +10,10 @@ __pycache__/
 
 # Runtime artifacts
 logs/
-backend/data/
+backend/data/*
+!backend/data/skins.json
+
+# Environment files
+.env
+backend/.env
 
