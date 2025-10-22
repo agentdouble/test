@@ -343,9 +343,102 @@ class Bonus:
             y = self.position[1] * TAILLE_CELLULE
             # Effet de clignotement quand il va disparaître
             if self.duree_vie > 30 or self.duree_vie % 6 < 3:
-                pygame.draw.circle(ecran, self.couleur, 
-                                 (x + TAILLE_CELLULE // 2, y + TAILLE_CELLULE // 2), 
+                pygame.draw.circle(ecran, self.couleur,
+                                 (x + TAILLE_CELLULE // 2, y + TAILLE_CELLULE // 2),
                                  TAILLE_CELLULE // 2)
+
+
+class Ennemi:
+    """Représente un obstacle mobile hostile."""
+
+    def __init__(
+        self,
+        position: tuple[int, int],
+        direction: tuple[int, int],
+        vitesse: float,
+        trajectoire: list[tuple[int, int]] | None = None,
+    ) -> None:
+        self.position = pygame.Vector2(position)
+        self.direction = pygame.Vector2(direction)
+        if self.direction.length_squared() == 0:
+            self.direction = pygame.Vector2(random.choice([HAUT, BAS, GAUCHE, DROITE]))
+        self.vitesse = max(0.25, vitesse)
+        self.trajectoire = trajectoire or []
+        self._progression = 0.0
+        self._index_trajectoire = 0
+        if self.trajectoire:
+            self.position = pygame.Vector2(self.trajectoire[0])
+            if len(self.trajectoire) > 1:
+                direction_initiale = pygame.Vector2(
+                    self.trajectoire[1][0] - self.trajectoire[0][0],
+                    self.trajectoire[1][1] - self.trajectoire[0][1],
+                )
+                if direction_initiale.length_squared() != 0:
+                    self.direction = direction_initiale
+        self.sprite = self._creer_sprite()
+
+    @property
+    def cellule(self) -> tuple[int, int]:
+        return (int(self.position.x), int(self.position.y))
+
+    def _creer_sprite(self) -> pygame.Surface:
+        surface = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA).convert_alpha()
+        rect = surface.get_rect().inflate(-4, -4)
+        couleur_corps = (210, 60, 80)
+        pygame.draw.rect(surface, couleur_corps, rect, border_radius=6)
+        pygame.draw.rect(surface, (60, 0, 0), rect, width=2, border_radius=6)
+
+        # Regard menaçant
+        oeil_centre = (rect.centerx + 3, rect.top + TAILLE_CELLULE // 3)
+        pygame.draw.circle(surface, (255, 255, 255, 190), oeil_centre, max(3, TAILLE_CELLULE // 5))
+        pygame.draw.circle(surface, (20, 20, 20), oeil_centre, max(2, TAILLE_CELLULE // 8))
+
+        # Ombre légère
+        ombre = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA)
+        pygame.draw.ellipse(
+            ombre,
+            (0, 0, 0, 90),
+            pygame.Rect(4, TAILLE_CELLULE - 6, TAILLE_CELLULE - 8, 6),
+        )
+        surface.blit(ombre, (0, 0))
+        return surface
+
+    def mettre_a_jour(self) -> None:
+        self._progression += self.vitesse
+        while self._progression >= 1.0:
+            self._progression -= 1.0
+            self._avancer()
+
+    def _avancer(self) -> None:
+        if self.trajectoire:
+            if not self.trajectoire:
+                return
+            self._index_trajectoire = (self._index_trajectoire + 1) % len(self.trajectoire)
+            nouvelle_case = self.trajectoire[self._index_trajectoire]
+            precedente = self.trajectoire[self._index_trajectoire - 1]
+            self.direction = pygame.Vector2(
+                nouvelle_case[0] - precedente[0],
+                nouvelle_case[1] - precedente[1],
+            )
+            self.position = pygame.Vector2(nouvelle_case)
+            return
+
+        prochaine = self.position + self.direction
+        if prochaine.x < 0 or prochaine.x >= COLONNES:
+            self.direction.x *= -1
+            prochaine = self.position + self.direction
+        if prochaine.y < 0 or prochaine.y >= LIGNES:
+            self.direction.y *= -1
+            prochaine = self.position + self.direction
+
+        prochaine.x = max(0, min(COLONNES - 1, prochaine.x))
+        prochaine.y = max(0, min(LIGNES - 1, prochaine.y))
+        self.position = pygame.Vector2(int(prochaine.x), int(prochaine.y))
+
+    def dessiner(self, ecran: pygame.Surface) -> None:
+        x = int(self.position.x) * TAILLE_CELLULE
+        y = int(self.position.y) * TAILLE_CELLULE
+        ecran.blit(self.sprite, (x, y))
 
 
 class Jeu:
@@ -369,6 +462,10 @@ class Jeu:
         self.frame_count = 0
         self.scores = charger_scores()
         self.score_enregistre = False
+        self.ennemis: list[Ennemi] = []
+        self._generateur_ennemis_iterateur = self._generer_ennemis()
+        self._maintenir_population_ennemis()
+        self._securiser_nourriture()
 
     def _enregistrer_score_si_necessaire(self):
         if not self.score_enregistre:
@@ -395,6 +492,130 @@ class Jeu:
             scores_affiches.append(("Vous", self.score, True))
 
         return scores_affiches
+
+    def _case_disponible(self, case: tuple[int, int]) -> bool:
+        if not (0 <= case[0] < COLONNES and 0 <= case[1] < LIGNES):
+            return False
+        if case in self.snake.positions:
+            return False
+        if case == self.nourriture.position:
+            return False
+        if self.bonus and case == self.bonus.position:
+            return False
+        return all(case != ennemi.cellule for ennemi in self.ennemis)
+
+    def _trouver_position_libre(
+        self,
+        cases_sup: list[tuple[int, int]] | None = None,
+        essais: int = 60,
+    ) -> tuple[int, int] | None:
+        cases_sup_set = set(cases_sup or [])
+        for _ in range(essais):
+            position = (
+                random.randint(0, COLONNES - 1),
+                random.randint(0, LIGNES - 1),
+            )
+            if position in cases_sup_set:
+                continue
+            if self._case_disponible(position):
+                return position
+        return None
+
+    def _generer_trajectoire_predeterminee(self) -> list[tuple[int, int]] | None:
+        for _ in range(25):
+            orientation = random.choice(("horizontal", "vertical"))
+            longueur = random.randint(4, 7)
+            if orientation == "horizontal":
+                max_depart = COLONNES - longueur
+                if max_depart < 0:
+                    continue
+                y = random.randint(0, LIGNES - 1)
+                depart = random.randint(0, max_depart)
+                aller = [(depart + i, y) for i in range(longueur)]
+            else:
+                max_depart = LIGNES - longueur
+                if max_depart < 0:
+                    continue
+                x = random.randint(0, COLONNES - 1)
+                depart = random.randint(0, max_depart)
+                aller = [(x, depart + i) for i in range(longueur)]
+
+            retour = list(reversed(aller[1:-1]))
+            trajectoire = aller + retour if retour else aller
+            if trajectoire and all(self._case_disponible(case) for case in trajectoire):
+                return trajectoire
+        return None
+
+    def _direction_depuis_trajectoire(self, trajectoire: list[tuple[int, int]]) -> tuple[int, int]:
+        if len(trajectoire) < 2:
+            return random.choice([HAUT, BAS, GAUCHE, DROITE])
+        a, b = trajectoire[0], trajectoire[1]
+        return (b[0] - a[0], b[1] - a[1])
+
+    def _vitesse_ennemi_pour_niveau(self) -> float:
+        base = 0.4 + 0.05 * (self.niveau - 1)
+        return max(0.25, min(1.25, base + random.uniform(0.0, 0.35)))
+
+    def _generer_ennemis(self):
+        while True:
+            trajectoire = None
+            if random.random() < 0.35:
+                trajectoire = self._generer_trajectoire_predeterminee()
+            if trajectoire:
+                direction = self._direction_depuis_trajectoire(trajectoire)
+                vitesse = self._vitesse_ennemi_pour_niveau()
+                yield Ennemi(trajectoire[0], direction, vitesse, trajectoire)
+                continue
+
+            position = self._trouver_position_libre()
+            if position is None:
+                yield None
+                continue
+            direction = random.choice([HAUT, BAS, GAUCHE, DROITE])
+            vitesse = self._vitesse_ennemi_pour_niveau()
+            yield Ennemi(position, direction, vitesse)
+
+    def _maintenir_population_ennemis(self) -> None:
+        cible = min(6, max(1, (self.niveau + 1) // 2))
+        essais = 0
+        while len(self.ennemis) < cible and essais < 60:
+            nouvel_ennemi = next(self._generateur_ennemis_iterateur)
+            essais += 1
+            if nouvel_ennemi is None:
+                continue
+            self.ennemis.append(nouvel_ennemi)
+        # Supprimer les ennemis excédentaires si le niveau a baissé (ex: reset)
+        if len(self.ennemis) > cible:
+            self.ennemis = self.ennemis[:cible]
+
+    def _securiser_nourriture(self) -> None:
+        positions_dangereuses = set(self.snake.positions)
+        positions_dangereuses.update(ennemi.cellule for ennemi in self.ennemis)
+        if self.bonus:
+            positions_dangereuses.add(self.bonus.position)
+
+        essais = 0
+        while self.nourriture.position in positions_dangereuses and essais < 100:
+            self.nourriture.generer()
+            essais += 1
+
+    def _mettre_a_jour_ennemis(self) -> bool:
+        positions_serpent = set(self.snake.positions)
+        for ennemi in list(self.ennemis):
+            ennemi.mettre_a_jour()
+            if ennemi.cellule in positions_serpent:
+                if self.invincible:
+                    self.score += 15 * self.multiplicateur_score
+                    self.ennemis.remove(ennemi)
+                else:
+                    self.game_over = True
+                    self._enregistrer_score_si_necessaire()
+                    return True
+
+        # Ajuster la population (nouvelles apparitions ou remplacements)
+        self._maintenir_population_ennemis()
+        self._securiser_nourriture()
+        return False
         
     def gerer_evenements(self):
         for evenement in pygame.event.get():
@@ -457,25 +678,28 @@ class Jeu:
             if self.snake.positions[0] == self.nourriture.position:
                 self.snake.manger()
                 self.score += 10 * self.multiplicateur_score
-                
+
                 # Augmenter le niveau tous les 50 points
                 if self.score % 50 == 0:
                     self.niveau += 1
                     self.vitesse_actuelle = min(FPS + self.niveau * 2, 30)
-                
+
                 # Générer nouvelle nourriture
-                positions_interdites = self.snake.positions[:]
+                positions_interdites = list(self.snake.positions)
+                positions_interdites.extend(ennemi.cellule for ennemi in self.ennemis)
                 if self.bonus:
                     positions_interdites.append(self.bonus.position)
                 while self.nourriture.position in positions_interdites:
                     self.nourriture.generer()
-                
+
                 # Chance de générer un bonus (20%)
                 if random.random() < 0.2 and not self.bonus:
                     type_bonus = random.choice(['vitesse', 'points', 'invincible'])
                     self.bonus = Bonus(type_bonus)
-                    self.bonus.generer(self.snake.positions + [self.nourriture.position])
-            
+                    positions_bonus = self.snake.positions + [self.nourriture.position]
+                    positions_bonus += [ennemi.cellule for ennemi in self.ennemis]
+                    self.bonus.generer(positions_bonus)
+
             # Gérer les bonus
             if self.bonus:
                 if not self.bonus.mise_a_jour():
@@ -493,6 +717,10 @@ class Jeu:
                     
                     self.score += 5 * self.multiplicateur_score
                     self.bonus = None
+
+            # Mettre à jour les ennemis (déplacements et collisions)
+            if self._mettre_a_jour_ennemis():
+                return
     
     def dessiner(self):
         self.ecran.fill(NOIR)
@@ -505,7 +733,9 @@ class Jeu:
             
             self.snake.dessiner(self.ecran)
             self.nourriture.dessiner(self.ecran)
-            
+            for ennemi in self.ennemis:
+                ennemi.dessiner(self.ecran)
+
             if self.bonus:
                 self.bonus.dessiner(self.ecran)
             
