@@ -2,10 +2,11 @@ import json
 import pygame
 import random
 import sys
-import time
 import colorsys
 import math
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 # Initialisation de Pygame
 pygame.init()
@@ -21,6 +22,7 @@ FPS = 10
 # Fichiers de données
 DOSSIER_DONNEES = Path(__file__).resolve().parent / "data"
 FICHIER_SCORES = DOSSIER_DONNEES / "scores.json"
+FICHIER_SERPENTS = DOSSIER_DONNEES / "skins.json"
 NB_SCORES_AFFICHES = 5
 
 
@@ -55,6 +57,134 @@ def sauvegarder_scores(scores: list[int], fichier: Path = FICHIER_SCORES) -> Non
     scores_triees = sorted((int(score) for score in scores), reverse=True)
     with fichier.open("w", encoding="utf-8") as flux:
         json.dump(scores_triees, flux, ensure_ascii=False, indent=2)
+
+
+@dataclass(frozen=True)
+class SnakeSkin:
+    identifiant: str
+    nom: str
+    cout: int
+    apparence: str
+    effet: str
+    couleur_mode: str = "rainbow"
+    couleurs: tuple[tuple[int, int, int], ...] = tuple()
+    options_snake: dict[str, Any] = field(default_factory=dict)
+
+
+SNAKE_SKINS: tuple[SnakeSkin, ...] = (
+    SnakeSkin(
+        identifiant="arc_en_ciel",
+        nom="Arc-en-ciel",
+        cout=0,
+        apparence="Serpent prismatique aux couleurs changeantes.",
+        effet="Animation lumineuse et dynamique.",
+        couleur_mode="rainbow",
+    ),
+    SnakeSkin(
+        identifiant="foret_de_jade",
+        nom="Forêt de jade",
+        cout=120,
+        apparence="Dégradé de verts profonds inspiré de la canopée.",
+        effet="Contour accentué et reflets atténués pour une meilleure lisibilité.",
+        couleur_mode="palette",
+        couleurs=(
+            (34, 139, 34),
+            (46, 180, 126),
+            (144, 238, 144),
+        ),
+        options_snake={
+            "AFFICHER_REFLET": False,
+            "COULEUR_CONTOUR": (12, 60, 28),
+            "LARGEUR_CONTOUR": 3,
+        },
+    ),
+    SnakeSkin(
+        identifiant="nocturne",
+        nom="Nocturne",
+        cout=250,
+        apparence="Teintes nocturnes soulignées d'un halo électrique.",
+        effet="Pulsation lumineuse rythmée et vitesse d'animation accrue.",
+        couleur_mode="pulse",
+        couleurs=((70, 70, 100),),
+        options_snake={
+            "AFFICHER_REFLET": False,
+            "AFFICHER_OMBRE": False,
+            "AFFICHER_CONTOUR": True,
+            "COULEUR_CONTOUR": (180, 180, 255),
+            "VITESSE_ANIMATION": 0.45,
+            "PULSE_VITESSE": 2.2,
+            "PULSE_AMPLITUDE": 0.55,
+            "PULSE_DECALE": 0.35,
+        },
+    ),
+)
+
+SNAKE_SKINS_PAR_ID: dict[str, SnakeSkin] = {skin.identifiant: skin for skin in SNAKE_SKINS}
+ID_SKIN_DEFAUT = SNAKE_SKINS[0].identifiant
+
+
+def charger_progression_serpents(
+    fichier: Path = FICHIER_SERPENTS,
+) -> dict[str, Any]:
+    """Charge les serpents débloqués et le serpent actif."""
+
+    progression_defaut = {
+        "achetes": [ID_SKIN_DEFAUT],
+        "actif": ID_SKIN_DEFAUT,
+    }
+
+    if not fichier.exists():
+        return progression_defaut
+
+    try:
+        with fichier.open("r", encoding="utf-8") as flux:
+            donnees = json.load(flux)
+    except (OSError, json.JSONDecodeError):
+        return progression_defaut
+
+    achetes = donnees.get("achetes")
+    if not isinstance(achetes, list):
+        achetes = []
+
+    achetes_valides = []
+    for identifiant in achetes:
+        if isinstance(identifiant, str) and identifiant in SNAKE_SKINS_PAR_ID:
+            achetes_valides.append(identifiant)
+
+    if ID_SKIN_DEFAUT not in achetes_valides:
+        achetes_valides.append(ID_SKIN_DEFAUT)
+
+    actif = donnees.get("actif", ID_SKIN_DEFAUT)
+    if actif not in SNAKE_SKINS_PAR_ID or actif not in achetes_valides:
+        actif = ID_SKIN_DEFAUT
+
+    return {
+        "achetes": achetes_valides,
+        "actif": actif,
+    }
+
+
+def sauvegarder_progression_serpents(
+    achetes: list[str],
+    actif: str,
+    fichier: Path = FICHIER_SERPENTS,
+) -> None:
+    """Sauvegarde la progression des serpents débloqués."""
+
+    if actif not in SNAKE_SKINS_PAR_ID:
+        actif = ID_SKIN_DEFAUT
+
+    uniques = []
+    for identifiant in achetes:
+        if identifiant in SNAKE_SKINS_PAR_ID and identifiant not in uniques:
+            uniques.append(identifiant)
+
+    if ID_SKIN_DEFAUT not in uniques:
+        uniques.append(ID_SKIN_DEFAUT)
+
+    fichier.parent.mkdir(parents=True, exist_ok=True)
+    with fichier.open("w", encoding="utf-8") as flux:
+        json.dump({"achetes": uniques, "actif": actif}, flux, ensure_ascii=False, indent=2)
 
 # Couleurs
 NOIR = (0, 0, 0)
@@ -108,10 +238,16 @@ class Snake:
     ECART_YEUX = 4                 # espacement latéral entre les yeux
     DISTANCE_DIRECTION_YEUX = 4    # décalage des yeux vers l'avant
     DECALAGE_PUPILLE = 2           # déplacement des pupilles vers la direction
-    def __init__(self):
+    def __init__(self, skin: SnakeSkin | None = None):
+        self.skin = skin or SNAKE_SKINS_PAR_ID[ID_SKIN_DEFAUT]
         self.positions = [(COLONNES // 2, LIGNES // 2)]
         self.direction = DROITE
         self.grandir = False
+        self._palette_couleurs = tuple(self.skin.couleurs)
+        self._options_skin = dict(self.skin.options_snake)
+
+        for attribut, valeur in self._options_skin.items():
+            setattr(self, attribut, valeur)
         
     def _couleur_arc_en_ciel(self, index_segment: int, current_time: float | None = None) -> tuple:
         """Retourne une couleur arc‑en‑ciel (RGB) pour un segment.
@@ -127,6 +263,45 @@ class Snake:
         hue = (index_segment * delta + current_time * vitesse) % 1.0
         r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
         return (int(r * 255), int(g * 255), int(b * 255))
+
+    def _couleur_palette(self, index_segment: int, current_time: float | None = None) -> tuple[int, int, int]:
+        if not self._palette_couleurs:
+            return self._couleur_arc_en_ciel(index_segment, current_time)
+
+        palette = self._palette_couleurs
+        if current_time is None:
+            current_time = pygame.time.get_ticks() / 1000.0
+
+        defilement = float(self._options_skin.get("PALETTE_DEFILEMENT", 0.0))
+        decalage = 0
+        if defilement:
+            decalage = int(current_time * defilement) % len(palette)
+
+        return palette[(index_segment + decalage) % len(palette)]
+
+    def _couleur_pulse(self, index_segment: int, current_time: float | None = None) -> tuple[int, int, int]:
+        base = self._palette_couleurs[0] if self._palette_couleurs else (100, 100, 100)
+        if current_time is None:
+            current_time = pygame.time.get_ticks() / 1000.0
+
+        vitesse = float(self._options_skin.get("PULSE_VITESSE", 1.5))
+        amplitude = float(self._options_skin.get("PULSE_AMPLITUDE", 0.4))
+        decalage = float(self._options_skin.get("PULSE_DECALE", 0.25))
+        phase = current_time * vitesse + index_segment * decalage
+        intensite = (math.sin(phase) + 1) / 2
+
+        return tuple(
+            max(0, min(255, int(c + (255 - c) * amplitude * intensite)))
+            for c in base
+        )
+
+    def _couleur_segment(self, index_segment: int, current_time: float | None = None) -> tuple[int, int, int]:
+        mode = getattr(self.skin, "couleur_mode", "rainbow")
+        if mode == "palette":
+            return self._couleur_palette(index_segment, current_time)
+        if mode == "pulse":
+            return self._couleur_pulse(index_segment, current_time)
+        return self._couleur_arc_en_ciel(index_segment, current_time)
 
     def _accentuer_couleur(self, couleur: tuple[int, int, int], boost: float) -> tuple[int, int, int]:
         """Éclaircit légèrement une couleur RGB."""
@@ -171,7 +346,7 @@ class Snake:
         for i, position in enumerate(self.positions):
             x = position[0] * TAILLE_CELLULE
             y = position[1] * TAILLE_CELLULE
-            couleur = self._couleur_arc_en_ciel(i, current_time)
+            couleur = self._couleur_segment(i, current_time)
 
             est_tete = (i == 0)
             rayon = self.RAYON_ANGLE_TETE if est_tete else self.RAYON_ANGLE_CORPS
@@ -353,7 +528,80 @@ class Jeu:
         self.ecran = pygame.display.set_mode((LARGEUR, HAUTEUR))
         pygame.display.set_caption("Snake")
         self.horloge = pygame.time.Clock()
-        self.snake = Snake()
+        self.font = pygame.font.Font(None, 36)
+        self.font_moyen = pygame.font.Font(None, 30)
+        self.font_petit = pygame.font.Font(None, 24)
+        self.scores = charger_scores()
+        self.meilleur_score = self.scores[0] if self.scores else 0
+
+        progression = charger_progression_serpents()
+        self.skins_debloques = set(progression["achetes"])
+        skin_active = progression.get("actif", ID_SKIN_DEFAUT)
+        self.skin_selectionnee = SNAKE_SKINS_PAR_ID.get(skin_active, SNAKE_SKINS_PAR_ID[ID_SKIN_DEFAUT])
+        if self.skin_selectionnee.identifiant not in self.skins_debloques:
+            self.skin_selectionnee = SNAKE_SKINS_PAR_ID[ID_SKIN_DEFAUT]
+            self.skins_debloques.add(self.skin_selectionnee.identifiant)
+
+        self.index_menu_selection = self._trouver_index_skin(self.skin_selectionnee.identifiant)
+        self.message_menu = ""
+        self.message_menu_couleur = BLANC
+
+        self.snake: Snake | None = None
+        self.nourriture: Nourriture | None = None
+        self.bonus: Bonus | None = None
+        self.score = 0
+        self.niveau = 1
+        self.multiplicateur_score = 1
+        self.vitesse_actuelle = FPS
+        self.invincible = False
+        self.temps_invincible = 0
+        self.temps_multiplicateur = 0
+        self.frame_count = 0
+        self.score_enregistre = False
+        self.etat = "menu"
+
+    def _trouver_index_skin(self, identifiant: str) -> int:
+        for index, skin in enumerate(SNAKE_SKINS):
+            if skin.identifiant == identifiant:
+                return index
+        return 0
+
+    def _mettre_a_jour_meilleur_score(self) -> None:
+        self.meilleur_score = max(self.scores) if self.scores else 0
+
+    def _sauvegarder_progression(self) -> None:
+        ordre = sorted(
+            self.skins_debloques,
+            key=lambda ident: (SNAKE_SKINS_PAR_ID[ident].cout, ident),
+        )
+        sauvegarder_progression_serpents(list(ordre), self.skin_selectionnee.identifiant)
+
+    def _peut_acheter_skin(self, skin: SnakeSkin) -> bool:
+        if skin.identifiant in self.skins_debloques:
+            return True
+        return self.meilleur_score >= skin.cout
+
+    def _valider_selection_skin(self) -> None:
+        skin = SNAKE_SKINS[self.index_menu_selection]
+        if skin.identifiant in self.skins_debloques:
+            self.skin_selectionnee = skin
+            self.message_menu = f"{skin.nom} sélectionné"
+            self.message_menu_couleur = VERT
+            self._sauvegarder_progression()
+            return
+
+        if self._peut_acheter_skin(skin):
+            self.skins_debloques.add(skin.identifiant)
+            self.skin_selectionnee = skin
+            self.message_menu = f"{skin.nom} débloqué !"
+            self.message_menu_couleur = ORANGE
+            self._sauvegarder_progression()
+        else:
+            self.message_menu = "Score insuffisant pour débloquer ce serpent."
+            self.message_menu_couleur = ROUGE
+
+    def _initialiser_nouvelle_partie(self) -> None:
+        self.snake = Snake(self.skin_selectionnee)
         self.nourriture = Nourriture()
         self.bonus = None
         self.score = 0
@@ -363,12 +611,80 @@ class Jeu:
         self.invincible = False
         self.temps_invincible = 0
         self.temps_multiplicateur = 0
-        self.font = pygame.font.Font(None, 36)
-        self.font_petit = pygame.font.Font(None, 24)
-        self.game_over = False
         self.frame_count = 0
-        self.scores = charger_scores()
         self.score_enregistre = False
+        self.etat = "jeu"
+        self.message_menu = ""
+
+    def _retour_menu_depuis_game_over(self) -> None:
+        self.etat = "menu"
+        self.index_menu_selection = self._trouver_index_skin(self.skin_selectionnee.identifiant)
+        self.message_menu = ""
+        self.message_menu_couleur = BLANC
+        self.vitesse_actuelle = FPS
+        self.snake = None
+        self.nourriture = None
+        self.bonus = None
+
+    def _dessiner_menu(self) -> None:
+        self.ecran.fill((15, 15, 18))
+
+        titre = self.font.render("Sélection des serpents", True, BLANC)
+        self.ecran.blit(titre, titre.get_rect(center=(LARGEUR // 2, 60)))
+
+        instructions = self.font_petit.render(
+            "HAUT/BAS : naviguer  •  ENTRÉE : sélectionner/acheter  •  ESPACE : jouer",
+            True,
+            GRIS,
+        )
+        self.ecran.blit(instructions, instructions.get_rect(center=(LARGEUR // 2, 100)))
+
+        meilleur = self.font_petit.render(f"Meilleur score : {self.meilleur_score}", True, BLANC)
+        self.ecran.blit(meilleur, (40, 130))
+
+        base_y = 170
+        ligne = 60
+        for index, skin in enumerate(SNAKE_SKINS):
+            y = base_y + index * ligne
+            rect = pygame.Rect(40, y - 10, LARGEUR - 80, 48)
+            if index == self.index_menu_selection:
+                pygame.draw.rect(self.ecran, (45, 45, 60), rect, border_radius=10)
+
+            debloque = skin.identifiant in self.skins_debloques
+            actif = skin.identifiant == self.skin_selectionnee.identifiant
+
+            if not debloque:
+                couleur_nom = GRIS
+            elif actif:
+                couleur_nom = VERT
+            else:
+                couleur_nom = BLANC
+
+            nom_surface = self.font_moyen.render(f"{skin.nom} - {skin.cout} pts", True, couleur_nom)
+            self.ecran.blit(nom_surface, (rect.x + 14, rect.y + 6))
+
+            if actif and debloque:
+                statut = ("Actif", VERT)
+            elif debloque:
+                statut = ("Débloqué", BLANC)
+            elif self._peut_acheter_skin(skin):
+                statut = ("Achetable", JAUNE)
+            else:
+                statut = ("Verrouillé", ROUGE)
+
+            statut_surface = self.font_petit.render(statut[0], True, statut[1])
+            self.ecran.blit(statut_surface, (rect.x + 16, rect.y + 26))
+
+        skin_selection = SNAKE_SKINS[self.index_menu_selection]
+        apparence_surface = self.font_petit.render(skin_selection.apparence, True, BLANC)
+        effet_surface = self.font_petit.render(skin_selection.effet, True, BLANC)
+        self.ecran.blit(apparence_surface, (40, HAUTEUR - 140))
+        self.ecran.blit(effet_surface, (40, HAUTEUR - 110))
+
+        if self.message_menu:
+            message_surface = self.font_petit.render(self.message_menu, True, self.message_menu_couleur)
+            message_rect = message_surface.get_rect(center=(LARGEUR // 2, HAUTEUR - 60))
+            self.ecran.blit(message_surface, message_rect)
 
     def _enregistrer_score_si_necessaire(self):
         if not self.score_enregistre:
@@ -376,6 +692,7 @@ class Jeu:
             self.scores.sort(reverse=True)
             sauvegarder_scores(self.scores)
             self.score_enregistre = True
+            self._mettre_a_jour_meilleur_score()
 
     def _scores_a_afficher(self) -> list[tuple[str, int, bool]]:
         scores_affiches: list[tuple[str, int, bool]] = []
@@ -401,151 +718,183 @@ class Jeu:
             if evenement.type == pygame.QUIT:
                 return False
             elif evenement.type == pygame.KEYDOWN:
-                if self.game_over:
+                if self.etat == "menu":
+                    if evenement.key in (pygame.K_UP, pygame.K_w):
+                        self.index_menu_selection = (self.index_menu_selection - 1) % len(SNAKE_SKINS)
+                        self.message_menu = ""
+                        self.message_menu_couleur = BLANC
+                    elif evenement.key in (pygame.K_DOWN, pygame.K_s):
+                        self.index_menu_selection = (self.index_menu_selection + 1) % len(SNAKE_SKINS)
+                        self.message_menu = ""
+                        self.message_menu_couleur = BLANC
+                    elif evenement.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        self._valider_selection_skin()
+                    elif evenement.key == pygame.K_SPACE:
+                        skin = SNAKE_SKINS[self.index_menu_selection]
+                        if skin.identifiant not in self.skins_debloques:
+                            self.message_menu = "Ce serpent est verrouillé."
+                            self.message_menu_couleur = ROUGE
+                        else:
+                            if skin.identifiant != self.skin_selectionnee.identifiant:
+                                self.skin_selectionnee = skin
+                                self._sauvegarder_progression()
+                            self._initialiser_nouvelle_partie()
+                elif self.etat == "jeu":
+                    if not self.snake:
+                        continue
+                    if evenement.key == pygame.K_UP:
+                        self.snake.changer_direction(HAUT)
+                    elif evenement.key == pygame.K_DOWN:
+                        self.snake.changer_direction(BAS)
+                    elif evenement.key == pygame.K_LEFT:
+                        self.snake.changer_direction(GAUCHE)
+                    elif evenement.key == pygame.K_RIGHT:
+                        self.snake.changer_direction(DROITE)
+                    elif evenement.key == pygame.K_ESCAPE:
+                        self._retour_menu_depuis_game_over()
+                elif self.etat == "game_over":
                     if evenement.key == pygame.K_SPACE:
-                        self.__init__()
-                elif evenement.key == pygame.K_UP:
-                    self.snake.changer_direction(HAUT)
-                elif evenement.key == pygame.K_DOWN:
-                    self.snake.changer_direction(BAS)
-                elif evenement.key == pygame.K_LEFT:
-                    self.snake.changer_direction(GAUCHE)
-                elif evenement.key == pygame.K_RIGHT:
-                    self.snake.changer_direction(DROITE)
+                        self._retour_menu_depuis_game_over()
         return True
     
     def mettre_a_jour(self):
-        if not self.game_over:
-            self.frame_count += 1
-            
-            # Gérer les effets temporaires
-            if self.temps_invincible > 0:
-                self.temps_invincible -= 1
-                if self.temps_invincible == 0:
-                    self.invincible = False
-                    
-            if self.temps_multiplicateur > 0:
-                self.temps_multiplicateur -= 1
-                if self.temps_multiplicateur == 0:
-                    self.multiplicateur_score = 1
-            
-            # Mouvement du serpent
-            if not self.snake.bouger():
-                if not self.invincible:
-                    self.game_over = True
-                    self._enregistrer_score_si_necessaire()
-                    return
-                else:
-                    # En mode invincible, téléporter de l'autre côté
-                    tete = self.snake.positions[0]
-                    if tete in self.snake.positions[1:]:
-                        self.game_over = True
-                        self._enregistrer_score_si_necessaire()
-                        return
-                    nouvelle_tete = list(tete)
-                    if tete[0] < 0:
-                        nouvelle_tete[0] = COLONNES - 1
-                    elif tete[0] >= COLONNES:
-                        nouvelle_tete[0] = 0
-                    if tete[1] < 0:
-                        nouvelle_tete[1] = LIGNES - 1
-                    elif tete[1] >= LIGNES:
-                        nouvelle_tete[1] = 0
-                    self.snake.positions[0] = tuple(nouvelle_tete)
-            
-            # Vérifier si le serpent mange la nourriture
-            if self.snake.positions[0] == self.nourriture.position:
-                self.snake.manger()
-                self.score += 10 * self.multiplicateur_score
-                
-                # Augmenter le niveau tous les 50 points
-                if self.score % 50 == 0:
-                    self.niveau += 1
-                    self.vitesse_actuelle = min(FPS + self.niveau * 2, 30)
-                
-                # Générer nouvelle nourriture
-                positions_interdites = self.snake.positions[:]
-                if self.bonus:
-                    positions_interdites.append(self.bonus.position)
-                while self.nourriture.position in positions_interdites:
-                    self.nourriture.generer()
-                
-                # Chance de générer un bonus (20%)
-                if random.random() < 0.2 and not self.bonus:
-                    type_bonus = random.choice(['vitesse', 'points', 'invincible'])
-                    self.bonus = Bonus(type_bonus)
-                    self.bonus.generer(self.snake.positions + [self.nourriture.position])
-            
-            # Gérer les bonus
+        if self.etat != "jeu" or not self.snake or not self.nourriture:
+            return
+
+        self.frame_count += 1
+
+        # Gérer les effets temporaires
+        if self.temps_invincible > 0:
+            self.temps_invincible -= 1
+            if self.temps_invincible == 0:
+                self.invincible = False
+
+        if self.temps_multiplicateur > 0:
+            self.temps_multiplicateur -= 1
+            if self.temps_multiplicateur == 0:
+                self.multiplicateur_score = 1
+
+        # Mouvement du serpent
+        if not self.snake.bouger():
+            if not self.invincible:
+                self.etat = "game_over"
+                self._enregistrer_score_si_necessaire()
+                return
+            # En mode invincible, téléporter de l'autre côté
+            tete = self.snake.positions[0]
+            if tete in self.snake.positions[1:]:
+                self.etat = "game_over"
+                self._enregistrer_score_si_necessaire()
+                return
+            nouvelle_tete = list(tete)
+            if tete[0] < 0:
+                nouvelle_tete[0] = COLONNES - 1
+            elif tete[0] >= COLONNES:
+                nouvelle_tete[0] = 0
+            if tete[1] < 0:
+                nouvelle_tete[1] = LIGNES - 1
+            elif tete[1] >= LIGNES:
+                nouvelle_tete[1] = 0
+            self.snake.positions[0] = tuple(nouvelle_tete)
+
+        # Vérifier si le serpent mange la nourriture
+        if self.snake.positions[0] == self.nourriture.position:
+            self.snake.manger()
+            self.score += 10 * self.multiplicateur_score
+
+            # Augmenter le niveau tous les 50 points
+            if self.score % 50 == 0:
+                self.niveau += 1
+                self.vitesse_actuelle = min(FPS + self.niveau * 2, 30)
+
+            # Générer nouvelle nourriture
+            positions_interdites = self.snake.positions[:]
             if self.bonus:
-                if not self.bonus.mise_a_jour():
-                    self.bonus = None
-                elif self.snake.positions[0] == self.bonus.position:
-                    # Appliquer l'effet du bonus
-                    if self.bonus.type == 'vitesse':
-                        self.vitesse_actuelle = max(5, self.vitesse_actuelle - 3)
-                    elif self.bonus.type == 'points':
-                        self.multiplicateur_score = 3
-                        self.temps_multiplicateur = 100
-                    elif self.bonus.type == 'invincible':
-                        self.invincible = True
-                        self.temps_invincible = 150
-                    
-                    self.score += 5 * self.multiplicateur_score
-                    self.bonus = None
+                positions_interdites.append(self.bonus.position)
+            while self.nourriture.position in positions_interdites:
+                self.nourriture.generer()
+
+            # Chance de générer un bonus (20%)
+            if random.random() < 0.2 and not self.bonus:
+                type_bonus = random.choice(['vitesse', 'points', 'invincible'])
+                self.bonus = Bonus(type_bonus)
+                self.bonus.generer(self.snake.positions + [self.nourriture.position])
+
+        # Gérer les bonus
+        if self.bonus:
+            if not self.bonus.mise_a_jour():
+                self.bonus = None
+            elif self.snake.positions[0] == self.bonus.position:
+                # Appliquer l'effet du bonus
+                if self.bonus.type == 'vitesse':
+                    self.vitesse_actuelle = max(5, self.vitesse_actuelle - 3)
+                elif self.bonus.type == 'points':
+                    self.multiplicateur_score = 3
+                    self.temps_multiplicateur = 100
+                elif self.bonus.type == 'invincible':
+                    self.invincible = True
+                    self.temps_invincible = 150
+
+                self.score += 5 * self.multiplicateur_score
+                self.bonus = None
     
     def dessiner(self):
+        if self.etat == "menu":
+            self._dessiner_menu()
+            pygame.display.flip()
+            return
+
         self.ecran.fill(NOIR)
-        
-        if not self.game_over:
+
+        if self.etat == "jeu" and self.snake and self.nourriture:
             # Effet visuel pour l'invincibilité
             if self.invincible and self.temps_invincible % 10 < 5:
-                # Bordure clignotante
                 pygame.draw.rect(self.ecran, ORANGE, (0, 0, LARGEUR, HAUTEUR), 3)
-            
+
             self.snake.dessiner(self.ecran)
             self.nourriture.dessiner(self.ecran)
-            
+
             if self.bonus:
                 self.bonus.dessiner(self.ecran)
-            
-            # Afficher les informations
+
             texte_score = self.font.render(f"Score: {self.score}", True, BLANC)
             self.ecran.blit(texte_score, (10, 10))
-            
+
             texte_niveau = self.font_petit.render(f"Niveau: {self.niveau}", True, BLANC)
             self.ecran.blit(texte_niveau, (10, 50))
-            
-            # Afficher les effets actifs
+
             y_effet = 80
             if self.multiplicateur_score > 1:
                 texte_multi = self.font_petit.render(f"Points x{self.multiplicateur_score}", True, VIOLET)
                 self.ecran.blit(texte_multi, (10, y_effet))
                 y_effet += 25
-            
+
             if self.invincible:
                 texte_invincible = self.font_petit.render("INVINCIBLE!", True, ORANGE)
                 self.ecran.blit(texte_invincible, (10, y_effet))
                 y_effet += 25
-            
+
             if self.vitesse_actuelle < FPS:
                 texte_vitesse = self.font_petit.render("Vitesse boost!", True, JAUNE)
                 self.ecran.blit(texte_vitesse, (10, y_effet))
-        else:
-            # Écran de game over
+
+        elif self.etat == "game_over":
             texte_game_over = self.font.render("GAME OVER", True, ROUGE)
-            rect_go = texte_game_over.get_rect(center=(LARGEUR // 2, HAUTEUR // 2 - 50))
+            rect_go = texte_game_over.get_rect(center=(LARGEUR // 2, HAUTEUR // 2 - 60))
             self.ecran.blit(texte_game_over, rect_go)
-            
+
             texte_score_final = self.font.render(f"Score final: {self.score}", True, BLANC)
-            rect_sf = texte_score_final.get_rect(center=(LARGEUR // 2, HAUTEUR // 2))
+            rect_sf = texte_score_final.get_rect(center=(LARGEUR // 2, HAUTEUR // 2 - 10))
             self.ecran.blit(texte_score_final, rect_sf)
-            
-            texte_rejouer = self.font.render("Appuyez sur ESPACE pour rejouer", True, BLANC)
-            rect_r = texte_rejouer.get_rect(center=(LARGEUR // 2, HAUTEUR // 2 + 50))
+
+            skin_actif = self.font_petit.render(f"Serpent: {self.skin_selectionnee.nom}", True, BLANC)
+            rect_skin = skin_actif.get_rect(center=(LARGEUR // 2, HAUTEUR // 2 + 20))
+            self.ecran.blit(skin_actif, rect_skin)
+
+            texte_rejouer = self.font.render("ESPACE pour retourner au menu", True, BLANC)
+            rect_r = texte_rejouer.get_rect(center=(LARGEUR // 2, HAUTEUR // 2 + 70))
             self.ecran.blit(texte_rejouer, rect_r)
 
-            # Afficher le classement des scores
             titre_scores = self.font.render("Top scores", True, BLANC)
             rect_titre = titre_scores.get_rect()
             rect_titre.midtop = (LARGEUR // 2, rect_r.bottom + 30)
@@ -570,7 +919,8 @@ class Jeu:
             en_cours = self.gerer_evenements()
             self.mettre_a_jour()
             self.dessiner()
-            self.horloge.tick(self.vitesse_actuelle)
+            cadence = self.vitesse_actuelle if self.etat == "jeu" else FPS
+            self.horloge.tick(cadence)
         
         pygame.quit()
         sys.exit()
