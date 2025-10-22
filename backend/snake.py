@@ -67,6 +67,8 @@ VIOLET = (255, 0, 255)
 ORANGE = (255, 165, 0)
 MARRON = (139, 69, 19)
 GRIS = (60, 60, 60)
+ROSE = (255, 105, 180)
+VERT_FEUILLE = (46, 139, 87)
 
 # Directions
 HAUT = (0, -1)
@@ -260,43 +262,56 @@ class Snake:
 
 
 class Nourriture:
-    # Constantes pour la banane
-    BANANE_ANGLE_DEBUT = 0.7  # radians
-    BANANE_ANGLE_FIN = 2.4    # radians
-    BANANE_EPAISSEUR = 5
-    BANANE_TIP_RAYON = 2
+    # Paramètres visuels pour la pomme
+    RAYON_POMME = TAILLE_CELLULE // 2 - 3
+    LARGEUR_REFLET = int(TAILLE_CELLULE * 0.35)
+    HAUTEUR_REFLET = int(TAILLE_CELLULE * 0.25)
+    LARGEUR_TIGE = 3
+    HAUTEUR_TIGE = 6
+    LARGEUR_FEUILLE = 6
+    HAUTEUR_FEUILLE = 4
+
     def __init__(self):
         self.position = None
-        # Sprite banane pré‑rendu pour éviter une recréation à chaque frame
-        self.sprite_banane = self._creer_sprite_banane()
+        # Sprite de la pomme pré‑rendu pour éviter une recréation à chaque frame
+        self.sprite_nourriture = self._creer_sprite_pomme()
         self.generer()
-        
+
     def generer(self):
-        self.position = (random.randint(0, COLONNES - 1), 
+        self.position = (random.randint(0, COLONNES - 1),
                         random.randint(0, LIGNES - 1))
-    
-    def _creer_sprite_banane(self):
+
+    def _creer_sprite_pomme(self):
         surf = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA).convert_alpha()
-        rect_arc = pygame.Rect(2, 2, TAILLE_CELLULE - 4, TAILLE_CELLULE - 4)
-        pygame.draw.arc(
-            surf,
-            JAUNE,
-            rect_arc,
-            self.BANANE_ANGLE_DEBUT,
-            self.BANANE_ANGLE_FIN,
-            self.BANANE_EPAISSEUR,
-        )
-        tip1 = (rect_arc.left + 3, rect_arc.bottom - 6)
-        tip2 = (rect_arc.right - 3, rect_arc.top + 6)
-        pygame.draw.circle(surf, MARRON, tip1, self.BANANE_TIP_RAYON)
-        pygame.draw.circle(surf, MARRON, tip2, self.BANANE_TIP_RAYON)
+
+        centre = (TAILLE_CELLULE // 2, TAILLE_CELLULE // 2 + 2)
+
+        # Corps principal de la pomme
+        pygame.draw.circle(surf, ROSE, centre, self.RAYON_POMME)
+
+        # Légère variation pour simuler le volume
+        reflet_rect = pygame.Rect(0, 0, self.LARGEUR_REFLET, self.HAUTEUR_REFLET)
+        reflet_rect.center = (centre[0] - self.RAYON_POMME // 2, centre[1] - self.RAYON_POMME // 2)
+        reflet_couleur = (min(255, ROSE[0] + 20), min(255, ROSE[1] + 20), min(255, ROSE[2] + 20), 160)
+        pygame.draw.ellipse(surf, reflet_couleur, reflet_rect)
+
+        # Tige
+        tige_rect = pygame.Rect(0, 0, self.LARGEUR_TIGE, self.HAUTEUR_TIGE)
+        tige_rect.center = (centre[0], centre[1] - self.RAYON_POMME - self.HAUTEUR_TIGE // 2 + 2)
+        pygame.draw.rect(surf, MARRON, tige_rect)
+
+        # Feuille verte à côté de la tige
+        feuille_rect = pygame.Rect(0, 0, self.LARGEUR_FEUILLE, self.HAUTEUR_FEUILLE)
+        feuille_rect.midleft = (tige_rect.right, tige_rect.top)
+        pygame.draw.ellipse(surf, VERT_FEUILLE, feuille_rect)
+
         return surf
-    
+
     def dessiner(self, ecran):
-        # Afficher la banane pré‑rendue
+        # Afficher la pomme pré‑rendue
         x = self.position[0] * TAILLE_CELLULE
         y = self.position[1] * TAILLE_CELLULE
-        ecran.blit(self.sprite_banane, (x, y))
+        ecran.blit(self.sprite_nourriture, (x, y))
 
 
 class Bonus:
