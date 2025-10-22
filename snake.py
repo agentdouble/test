@@ -40,6 +40,32 @@ class Snake:
     VITESSE_ANIMATION = 0.25  # cycles par seconde
     DELTA_COULEUR = 0.10      # espacement de teinte entre segments
     AFFICHER_CONTOUR = True   # contour optionnel pour la lisibilité
+
+    # Palette et rendu (rafraîchissement visuel)
+    COULEUR_CONTOUR = (40, 40, 40)  # gris anthracite : contraste doux sur le fond noir
+    LARGEUR_CONTOUR = 2             # intensité du contour (px)
+    COULEUR_OMBRE = (0, 0, 0, 110)  # ombre portée diffuse
+    DECALAGE_OMBRE = (3, 3)         # décalage de l'ombre (x, y)
+    AFFICHER_OMBRE = True
+    COULEUR_REFLET = (255, 255, 255, 45)  # reflet léger pour donner du volume
+    AFFICHER_REFLET = True
+
+    # Géométrie des segments
+    RAYON_ANGLE_CORPS = 6
+    RAYON_ANGLE_TETE = 8
+    ECLAT_TETE = 0.18              # renforce légèrement la luminosité de la tête
+    ECLAT_MUSEAU = 0.32            # museau plus clair pour le volume
+    DECALAGE_MUSEAU = 4
+    RAYON_MUSEAU = 4
+
+    # Animation des yeux (directionnelle)
+    COULEUR_YEUX = (250, 250, 250)
+    COULEUR_PUPILLE = (25, 25, 25)
+    RAYON_YEUX = 4
+    RAYON_PUPILLE = 2
+    ECART_YEUX = 4                 # espacement latéral entre les yeux
+    DISTANCE_DIRECTION_YEUX = 4    # décalage des yeux vers l'avant
+    DECALAGE_PUPILLE = 2           # déplacement des pupilles vers la direction
     def __init__(self):
         self.positions = [(COLONNES // 2, LIGNES // 2)]
         self.direction = DROITE
@@ -59,6 +85,13 @@ class Snake:
         hue = (index_segment * delta + current_time * vitesse) % 1.0
         r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
         return (int(r * 255), int(g * 255), int(b * 255))
+
+    def _accentuer_couleur(self, couleur: tuple[int, int, int], boost: float) -> tuple[int, int, int]:
+        """Éclaircit légèrement une couleur RGB."""
+        return tuple(
+            min(255, int(c + (255 - c) * boost))
+            for c in couleur
+        )
         
     def bouger(self):
         tete = self.positions[0]
@@ -97,11 +130,93 @@ class Snake:
             x = position[0] * TAILLE_CELLULE
             y = position[1] * TAILLE_CELLULE
             couleur = self._couleur_arc_en_ciel(i, current_time)
-            # Dessin principal
-            pygame.draw.rect(ecran, couleur, (x, y, TAILLE_CELLULE, TAILLE_CELLULE))
-            # Contour optionnel en gris pour contraster avec le fond noir
+
+            est_tete = (i == 0)
+            rayon = self.RAYON_ANGLE_TETE if est_tete else self.RAYON_ANGLE_CORPS
+            if est_tete:
+                couleur = self._accentuer_couleur(couleur, self.ECLAT_TETE)
+
+            # Ombre portée pour du relief
+            if self.AFFICHER_OMBRE:
+                ombre_surface = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA)
+                pygame.draw.rect(
+                    ombre_surface,
+                    self.COULEUR_OMBRE,
+                    ombre_surface.get_rect(),
+                    border_radius=rayon,
+                )
+                ecran.blit(ombre_surface, (x + self.DECALAGE_OMBRE[0], y + self.DECALAGE_OMBRE[1]))
+
+            segment_surface = pygame.Surface((TAILLE_CELLULE, TAILLE_CELLULE), pygame.SRCALPHA)
+            rect = segment_surface.get_rect()
+            pygame.draw.rect(segment_surface, couleur, rect, border_radius=rayon)
+
+            if self.AFFICHER_REFLET:
+                reflet_rect = pygame.Rect(0, 0, int(TAILLE_CELLULE * 0.65), int(TAILLE_CELLULE * 0.5))
+                reflet_rect.x += 3
+                reflet_rect.y += 2
+                pygame.draw.ellipse(segment_surface, self.COULEUR_REFLET, reflet_rect)
+
             if self.AFFICHER_CONTOUR:
-                pygame.draw.rect(ecran, GRIS, (x, y, TAILLE_CELLULE, TAILLE_CELLULE), 1)
+                pygame.draw.rect(
+                    segment_surface,
+                    self.COULEUR_CONTOUR,
+                    rect,
+                    width=self.LARGEUR_CONTOUR,
+                    border_radius=rayon,
+                )
+
+            ecran.blit(segment_surface, (x, y))
+
+            if est_tete:
+                self._dessiner_tete(ecran, x, y, couleur)
+
+    def _dessiner_tete(self, ecran, x: int, y: int, couleur: tuple[int, int, int]):
+        """Ajoute museau et yeux orientés sur la tête du serpent."""
+        centre_x = x + TAILLE_CELLULE // 2
+        centre_y = y + TAILLE_CELLULE // 2
+        dir_x, dir_y = self.direction
+
+        # Museau légèrement plus clair dans la direction de déplacement
+        museau_couleur = self._accentuer_couleur(couleur, self.ECLAT_MUSEAU)
+        museau_centre = (
+            centre_x + dir_x * self.DECALAGE_MUSEAU,
+            centre_y + dir_y * self.DECALAGE_MUSEAU,
+        )
+        pygame.draw.circle(
+            ecran,
+            museau_couleur,
+            (int(museau_centre[0]), int(museau_centre[1])),
+            self.RAYON_MUSEAU,
+        )
+
+        # Calcul des yeux en fonction de la direction
+        if dir_x != 0:
+            avance = dir_x * self.DISTANCE_DIRECTION_YEUX
+            lateral = self.ECART_YEUX
+            yeux = [
+                (centre_x + avance, centre_y - lateral),
+                (centre_x + avance, centre_y + lateral),
+            ]
+            pupille_offset = (dir_x * self.DECALAGE_PUPILLE, 0)
+        else:
+            avance = dir_y * self.DISTANCE_DIRECTION_YEUX
+            lateral = self.ECART_YEUX
+            yeux = [
+                (centre_x - lateral, centre_y + avance),
+                (centre_x + lateral, centre_y + avance),
+            ]
+            pupille_offset = (0, dir_y * self.DECALAGE_PUPILLE)
+
+        for oeil in yeux:
+            pygame.draw.circle(ecran, self.COULEUR_YEUX, (int(oeil[0]), int(oeil[1])), self.RAYON_YEUX)
+            pupille_centre = (oeil[0] + pupille_offset[0], oeil[1] + pupille_offset[1])
+            pygame.draw.circle(
+                ecran,
+                self.COULEUR_PUPILLE,
+                (int(pupille_centre[0]), int(pupille_centre[1])),
+                self.RAYON_PUPILLE,
+            )
 
 
 class Nourriture:
