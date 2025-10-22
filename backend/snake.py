@@ -99,6 +99,25 @@ SNAKE_SKINS: tuple[SnakeSkin, ...] = (
         },
     ),
     SnakeSkin(
+        identifiant="ocean_profond",
+        nom="Océan profond",
+        cout=180,
+        apparence="Palette de bleus marins rappelant les profondeurs océaniques.",
+        effet="Dégradé fluide entre nuances de bleu avec contour brillant.",
+        couleur_mode="palette",
+        couleurs=(
+            (0, 105, 148),
+            (30, 144, 255),
+            (135, 206, 250),
+        ),
+        options_snake={
+            "AFFICHER_REFLET": True,
+            "COULEUR_CONTOUR": (0, 50, 80),
+            "LARGEUR_CONTOUR": 2,
+            "PALETTE_DEFILEMENT": 1.5,
+        },
+    ),
+    SnakeSkin(
         identifiant="nocturne",
         nom="Nocturne",
         cout=250,
@@ -115,6 +134,100 @@ SNAKE_SKINS: tuple[SnakeSkin, ...] = (
             "PULSE_VITESSE": 2.2,
             "PULSE_AMPLITUDE": 0.55,
             "PULSE_DECALE": 0.35,
+        },
+    ),
+    SnakeSkin(
+        identifiant="magma",
+        nom="Magma",
+        cout=350,
+        apparence="Serpent incandescent évoquant la lave en fusion.",
+        effet="Pulsation rouge-orange intense avec effet de chaleur.",
+        couleur_mode="pulse",
+        couleurs=((180, 50, 30),),
+        options_snake={
+            "AFFICHER_REFLET": False,
+            "AFFICHER_OMBRE": True,
+            "AFFICHER_CONTOUR": True,
+            "COULEUR_CONTOUR": (255, 140, 0),
+            "COULEUR_OMBRE": (255, 69, 0, 80),
+            "VITESSE_ANIMATION": 0.35,
+            "PULSE_VITESSE": 3.0,
+            "PULSE_AMPLITUDE": 0.7,
+            "PULSE_DECALE": 0.2,
+        },
+    ),
+    SnakeSkin(
+        identifiant="desert_royal",
+        nom="Désert royal",
+        cout=400,
+        apparence="Tons chauds du désert avec éclat doré.",
+        effet="Palette or et sable avec reflets intenses.",
+        couleur_mode="palette",
+        couleurs=(
+            (218, 165, 32),
+            (255, 215, 0),
+            (255, 235, 140),
+        ),
+        options_snake={
+            "AFFICHER_REFLET": True,
+            "COULEUR_CONTOUR": (139, 90, 0),
+            "LARGEUR_CONTOUR": 3,
+            "COULEUR_REFLET": (255, 255, 200, 80),
+            "PALETTE_DEFILEMENT": 2.0,
+        },
+    ),
+    SnakeSkin(
+        identifiant="venimeux",
+        nom="Venimeux",
+        cout=500,
+        apparence="Vert toxique lumineux avec effet d'avertissement.",
+        effet="Pulsation acide rapide évoquant le danger.",
+        couleur_mode="pulse",
+        couleurs=((100, 200, 50),),
+        options_snake={
+            "AFFICHER_REFLET": False,
+            "AFFICHER_OMBRE": False,
+            "AFFICHER_CONTOUR": True,
+            "COULEUR_CONTOUR": (200, 255, 0),
+            "VITESSE_ANIMATION": 0.55,
+            "PULSE_VITESSE": 4.0,
+            "PULSE_AMPLITUDE": 0.6,
+            "PULSE_DECALE": 0.15,
+        },
+    ),
+    SnakeSkin(
+        identifiant="cristal",
+        nom="Cristal",
+        cout=600,
+        apparence="Serpent translucide aux couleurs pastel cristallines.",
+        effet="Palette douce avec effets de transparence et brillance.",
+        couleur_mode="palette",
+        couleurs=(
+            (200, 180, 255),
+            (180, 220, 255),
+            (220, 200, 255),
+        ),
+        options_snake={
+            "AFFICHER_REFLET": True,
+            "COULEUR_CONTOUR": (150, 130, 200),
+            "LARGEUR_CONTOUR": 2,
+            "COULEUR_REFLET": (255, 255, 255, 100),
+            "PALETTE_DEFILEMENT": 1.0,
+        },
+    ),
+    SnakeSkin(
+        identifiant="galaxie",
+        nom="Galaxie",
+        cout=750,
+        apparence="Serpent cosmique scintillant aux teintes galactiques.",
+        effet="Arc-en-ciel ralenti avec effet étoilé mystique.",
+        couleur_mode="rainbow",
+        options_snake={
+            "AFFICHER_REFLET": True,
+            "COULEUR_CONTOUR": (50, 0, 100),
+            "LARGEUR_CONTOUR": 3,
+            "VITESSE_ANIMATION": 0.15,
+            "COULEUR_REFLET": (255, 255, 255, 120),
         },
     ),
 )
@@ -629,24 +742,24 @@ class Jeu:
     def _dessiner_menu(self) -> None:
         self.ecran.fill((15, 15, 18))
 
-        titre = self.font.render("Sélection des serpents", True, BLANC)
-        self.ecran.blit(titre, titre.get_rect(center=(LARGEUR // 2, 60)))
+        titre = self.font_moyen.render("Sélection des serpents", True, BLANC)
+        self.ecran.blit(titre, titre.get_rect(center=(LARGEUR // 2, 30)))
 
         instructions = self.font_petit.render(
-            "HAUT/BAS : naviguer  •  ENTRÉE : sélectionner/acheter  •  ESPACE : jouer",
+            "↑↓ : naviguer  •  ENTRÉE : sélectionner  •  ESPACE : jouer",
             True,
             GRIS,
         )
-        self.ecran.blit(instructions, instructions.get_rect(center=(LARGEUR // 2, 100)))
+        self.ecran.blit(instructions, instructions.get_rect(center=(LARGEUR // 2, 55)))
 
         meilleur = self.font_petit.render(f"Meilleur score : {self.meilleur_score}", True, BLANC)
-        self.ecran.blit(meilleur, (40, 130))
+        self.ecran.blit(meilleur, (40, 75))
 
-        base_y = 170
-        ligne = 60
+        base_y = 100
+        ligne = 38
         for index, skin in enumerate(SNAKE_SKINS):
             y = base_y + index * ligne
-            rect = pygame.Rect(40, y - 10, LARGEUR - 80, 48)
+            rect = pygame.Rect(40, y - 8, LARGEUR - 80, 40)
             if index == self.index_menu_selection:
                 pygame.draw.rect(self.ecran, (45, 45, 60), rect, border_radius=10)
 
@@ -660,8 +773,8 @@ class Jeu:
             else:
                 couleur_nom = BLANC
 
-            nom_surface = self.font_moyen.render(f"{skin.nom} - {skin.cout} pts", True, couleur_nom)
-            self.ecran.blit(nom_surface, (rect.x + 14, rect.y + 6))
+            nom_surface = self.font_petit.render(f"{skin.nom} - {skin.cout} pts", True, couleur_nom)
+            self.ecran.blit(nom_surface, (rect.x + 12, rect.y + 4))
 
             if actif and debloque:
                 statut = ("Actif", VERT)
@@ -673,17 +786,11 @@ class Jeu:
                 statut = ("Verrouillé", ROUGE)
 
             statut_surface = self.font_petit.render(statut[0], True, statut[1])
-            self.ecran.blit(statut_surface, (rect.x + 16, rect.y + 26))
-
-        skin_selection = SNAKE_SKINS[self.index_menu_selection]
-        apparence_surface = self.font_petit.render(skin_selection.apparence, True, BLANC)
-        effet_surface = self.font_petit.render(skin_selection.effet, True, BLANC)
-        self.ecran.blit(apparence_surface, (40, HAUTEUR - 140))
-        self.ecran.blit(effet_surface, (40, HAUTEUR - 110))
+            self.ecran.blit(statut_surface, (rect.x + 12, rect.y + 20))
 
         if self.message_menu:
             message_surface = self.font_petit.render(self.message_menu, True, self.message_menu_couleur)
-            message_rect = message_surface.get_rect(center=(LARGEUR // 2, HAUTEUR - 60))
+            message_rect = message_surface.get_rect(center=(LARGEUR // 2, HAUTEUR - 15))
             self.ecran.blit(message_surface, message_rect)
 
     def _enregistrer_score_si_necessaire(self):
