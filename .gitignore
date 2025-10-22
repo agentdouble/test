@@ -13,3 +13,7 @@ logs/
 backend/data/*
 !backend/data/skins.json
 
+# Environment files
+.env
+backend/.env
+
