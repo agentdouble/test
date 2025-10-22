@@ -1,9 +1,11 @@
+import json
 import pygame
 import random
 import sys
 import time
 import colorsys
 import math
+from pathlib import Path
 
 # Initialisation de Pygame
 pygame.init()
@@ -15,6 +17,44 @@ TAILLE_CELLULE = 20
 LIGNES = HAUTEUR // TAILLE_CELLULE
 COLONNES = LARGEUR // TAILLE_CELLULE
 FPS = 10
+
+# Fichiers de données
+DOSSIER_DONNEES = Path(__file__).resolve().parent / "data"
+FICHIER_SCORES = DOSSIER_DONNEES / "scores.json"
+NB_SCORES_AFFICHES = 5
+
+
+def charger_scores(fichier: Path = FICHIER_SCORES) -> list[int]:
+    """Charge les scores sauvegardés depuis ``fichier``."""
+    if not fichier.exists():
+        return []
+
+    try:
+        with fichier.open("r", encoding="utf-8") as flux:
+            donnees = json.load(flux)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    if not isinstance(donnees, list):
+        return []
+
+    scores = []
+    for valeur in donnees:
+        try:
+            scores.append(int(valeur))
+        except (TypeError, ValueError):
+            continue
+
+    scores.sort(reverse=True)
+    return scores
+
+
+def sauvegarder_scores(scores: list[int], fichier: Path = FICHIER_SCORES) -> None:
+    """Enregistre ``scores`` dans ``fichier`` (tri décroissant)."""
+    fichier.parent.mkdir(parents=True, exist_ok=True)
+    scores_triees = sorted((int(score) for score in scores), reverse=True)
+    with fichier.open("w", encoding="utf-8") as flux:
+        json.dump(scores_triees, flux, ensure_ascii=False, indent=2)
 
 # Couleurs
 NOIR = (0, 0, 0)
@@ -197,6 +237,34 @@ class Jeu:
         self.font_petit = pygame.font.Font(None, 24)
         self.game_over = False
         self.frame_count = 0
+        self.scores = charger_scores()
+        self.score_enregistre = False
+
+    def _enregistrer_score_si_necessaire(self):
+        if not self.score_enregistre:
+            self.scores.append(self.score)
+            self.scores.sort(reverse=True)
+            sauvegarder_scores(self.scores)
+            self.score_enregistre = True
+
+    def _scores_a_afficher(self) -> list[tuple[str, int, bool]]:
+        scores_affiches: list[tuple[str, int, bool]] = []
+        score_courant_marque = False
+
+        for indice, score in enumerate(self.scores[:NB_SCORES_AFFICHES], start=1):
+            est_courant = False
+            if not score_courant_marque and score == self.score:
+                est_courant = True
+                score_courant_marque = True
+            scores_affiches.append((f"{indice}.", score, est_courant))
+
+        if not score_courant_marque:
+            scores_affiches.append(("Vous", self.score, True))
+
+        if not scores_affiches:
+            scores_affiches.append(("Vous", self.score, True))
+
+        return scores_affiches
         
     def gerer_evenements(self):
         for evenement in pygame.event.get():
@@ -235,12 +303,14 @@ class Jeu:
             if not self.snake.bouger():
                 if not self.invincible:
                     self.game_over = True
+                    self._enregistrer_score_si_necessaire()
                     return
                 else:
                     # En mode invincible, téléporter de l'autre côté
                     tete = self.snake.positions[0]
                     if tete in self.snake.positions[1:]:
                         self.game_over = True
+                        self._enregistrer_score_si_necessaire()
                         return
                     nouvelle_tete = list(tete)
                     if tete[0] < 0:
@@ -344,7 +414,24 @@ class Jeu:
             texte_rejouer = self.font.render("Appuyez sur ESPACE pour rejouer", True, BLANC)
             rect_r = texte_rejouer.get_rect(center=(LARGEUR // 2, HAUTEUR // 2 + 50))
             self.ecran.blit(texte_rejouer, rect_r)
-        
+
+            # Afficher le classement des scores
+            titre_scores = self.font.render("Top scores", True, BLANC)
+            rect_titre = titre_scores.get_rect()
+            rect_titre.midtop = (LARGEUR // 2, rect_r.bottom + 30)
+            self.ecran.blit(titre_scores, rect_titre)
+
+            y_ligne = rect_titre.bottom + 10
+            for etiquette, score, est_courant in self._scores_a_afficher():
+                separateur = ":" if not etiquette.endswith(".") else ""
+                texte = f"{etiquette}{separateur} {score}"
+                couleur = VERT if est_courant else BLANC
+                rendu = self.font_petit.render(texte, True, couleur)
+                rect_ligne = rendu.get_rect()
+                rect_ligne.midtop = (LARGEUR // 2, y_ligne)
+                self.ecran.blit(rendu, rect_ligne)
+                y_ligne += 24
+
         pygame.display.flip()
     
     def executer(self):
