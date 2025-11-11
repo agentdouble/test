@@ -14,6 +14,11 @@ const DIMENSIONS = [
 
 const FILTER_FIELDS = DIMENSIONS;
 
+const TABS = [
+  { id: 'dashboard', label: 'Tableau de bord' },
+  { id: 'indicators', label: 'Indicateurs clés' }
+];
+
 const CURRENCY_FORMATTER = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
   currency: 'EUR'
@@ -67,6 +72,7 @@ function buildFilterState() {
 function App() {
   const [selectedDimension, setSelectedDimension] = useState(DIMENSIONS[0].value);
   const [filters, setFilters] = useState(buildFilterState);
+  const [activeTab, setActiveTab] = useState(TABS[0].id);
 
   const filterOptions = useMemo(
     () =>
@@ -188,67 +194,85 @@ function App() {
         </p>
       </header>
 
+      <nav className="app__tabs" aria-label="Sections du tableau de bord">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`app__tab ${tab.id === activeTab ? 'app__tab--active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            aria-current={tab.id === activeTab ? 'page' : undefined}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
       <main className="app__content">
-        <IndicatorBuilder />
+        {activeTab === 'indicators' ? (
+          <IndicatorBuilder />
+        ) : (
+          <>
+            <section className="app__filters">
+              <FilterPanel
+                dimensions={DIMENSIONS}
+                selectedDimension={selectedDimension}
+                onDimensionChange={setSelectedDimension}
+                filters={filterOptions}
+                onFilterToggle={handleFilterToggle}
+              />
+            </section>
 
-        <section className="app__filters">
-          <FilterPanel
-            dimensions={DIMENSIONS}
-            selectedDimension={selectedDimension}
-            onDimensionChange={setSelectedDimension}
-            filters={filterOptions}
-            onFilterToggle={handleFilterToggle}
-          />
-        </section>
+            <section className="app__kpis">
+              {summaryCards.map((card) => (
+                <KpiCard
+                  key={card.key}
+                  title={card.title}
+                  value={card.value}
+                  description={card.description}
+                  tone={card.tone}
+                />
+              ))}
+            </section>
 
-        <section className="app__kpis">
-          {summaryCards.map((card) => (
-            <KpiCard
-              key={card.key}
-              title={card.title}
-              value={card.value}
-              description={card.description}
-              tone={card.tone}
-            />
-          ))}
-        </section>
+            <SegmentTable dimensionLabel={dimensionLabel} rows={segments} />
 
-        <SegmentTable dimensionLabel={dimensionLabel} rows={segments} />
-
-        <section className="app__raw-data">
-          <header>
-            <h2>Données transactionnelles brutes</h2>
-            <p>Exportez ces données pour une analyse approfondie ou un partage dans vos outils internes.</p>
-          </header>
-          <div className="app__table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Canal</th>
-                  <th>Campagne</th>
-                  <th>Produit</th>
-                  <th>Revenu</th>
-                  <th>Leads</th>
-                  <th>Commandes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTransactions.map((transaction) => (
-                  <tr key={`${transaction.date}-${transaction.campaign}-${transaction.channel}`}>
-                    <td>{transaction.date}</td>
-                    <td>{transaction.channel}</td>
-                    <td>{transaction.campaign}</td>
-                    <td>{transaction.product}</td>
-                    <td>{CURRENCY_FORMATTER.format(transaction.revenue)}</td>
-                    <td>{INTEGER_FORMATTER.format(transaction.leads)}</td>
-                    <td>{INTEGER_FORMATTER.format(transaction.orders)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+            <section className="app__raw-data">
+              <header>
+                <h2>Données transactionnelles brutes</h2>
+                <p>Exportez ces données pour une analyse approfondie ou un partage dans vos outils internes.</p>
+              </header>
+              <div className="app__table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Canal</th>
+                      <th>Campagne</th>
+                      <th>Produit</th>
+                      <th>Revenu</th>
+                      <th>Leads</th>
+                      <th>Commandes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTransactions.map((transaction) => (
+                      <tr key={`${transaction.date}-${transaction.campaign}-${transaction.channel}`}>
+                        <td>{transaction.date}</td>
+                        <td>{transaction.channel}</td>
+                        <td>{transaction.campaign}</td>
+                        <td>{transaction.product}</td>
+                        <td>{CURRENCY_FORMATTER.format(transaction.revenue)}</td>
+                        <td>{INTEGER_FORMATTER.format(transaction.leads)}</td>
+                        <td>{INTEGER_FORMATTER.format(transaction.orders)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
       </main>
     </div>
   );
