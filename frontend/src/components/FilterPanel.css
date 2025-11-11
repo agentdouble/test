@@ -1,0 +1,73 @@
+.filter-panel {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 24px;
+}
+
+.filter-panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-panel__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #5b6b8a;
+}
+
+.filter-panel__select {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  font-size: 1rem;
+  transition: border 0.2s ease;
+}
+
+.filter-panel__select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+}
+
+.filter-panel__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.filter-panel__fieldset {
+  margin: 0;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.filter-panel__options {
+  display: grid;
+  gap: 8px;
+}
+
+.filter-panel__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: #1f2a44;
+}
+
+.filter-panel__option input {
+  accent-color: #3b82f6;
+}
+
+.filter-panel__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}

@@ -1,0 +1,105 @@
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  display: grid;
+  gap: 40px;
+}
+
+.app__hero {
+  text-align: center;
+  display: grid;
+  gap: 16px;
+}
+
+.app__badge {
+  margin: 0 auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.app__hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3rem);
+  color: #0f172a;
+}
+
+.app__subtitle {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #475569;
+}
+
+.app__content {
+  display: grid;
+  gap: 32px;
+}
+
+.app__filters {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.app__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.app__raw-data {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.app__raw-data header h2 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.app__raw-data header p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.app__table-wrapper {
+  overflow-x: auto;
+}
+
+.app__raw-data table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.app__raw-data th,
+.app__raw-data td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.app__raw-data tbody tr:nth-child(odd) {
+  background: rgba(241, 245, 249, 0.5);
+}
+
+@media (max-width: 768px) {
+  .app {
+    padding: 32px 16px 48px;
+  }
+
+  .app__filters {
+    position: static;
+  }
+}
