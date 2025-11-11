@@ -1,0 +1,326 @@
+.indicator-builder {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0));
+  border-radius: 24px;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  padding: 32px;
+  display: grid;
+  gap: 32px;
+}
+
+.indicator-builder__intro {
+  display: grid;
+  gap: 12px;
+  max-width: 640px;
+}
+
+.indicator-builder__intro h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 2.8vw, 2.4rem);
+  color: #0f172a;
+}
+
+.indicator-builder__intro p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.indicator-builder__tag {
+  width: fit-content;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.indicator-builder__layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  align-items: start;
+}
+
+.indicator-builder__form {
+  display: grid;
+  gap: 20px;
+  background: white;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 24px;
+  box-shadow: 0 12px 40px -24px rgba(30, 64, 175, 0.45);
+}
+
+.indicator-builder__field {
+  display: grid;
+  gap: 10px;
+}
+
+.indicator-builder__field label,
+.indicator-builder__field legend {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.indicator-builder__field input[type='text'],
+.indicator-builder__field select,
+.indicator-builder__field textarea {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  padding: 10px 14px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.indicator-builder__field textarea {
+  resize: vertical;
+}
+
+.indicator-builder__field input:focus,
+.indicator-builder__field select:focus,
+.indicator-builder__field textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.indicator-builder__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.indicator-builder__toggle {
+  display: inline-grid;
+  grid-auto-flow: column;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.indicator-builder__toggle button {
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #1e3a8a;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.indicator-builder__toggle button:hover {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.indicator-builder__toggle button.is-active {
+  background: white;
+  color: #1d4ed8;
+  box-shadow: 0 6px 16px -12px rgba(37, 99, 235, 0.6);
+}
+
+.indicator-builder__helper {
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.indicator-builder__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.indicator-builder__actions button {
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.indicator-builder__actions button[type='submit'] {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: white;
+  box-shadow: 0 10px 20px -10px rgba(37, 99, 235, 0.6);
+}
+
+.indicator-builder__actions button[type='submit']:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px -12px rgba(37, 99, 235, 0.7);
+}
+
+.indicator-builder__actions .secondary {
+  background: white;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: #1f2937;
+}
+
+.indicator-builder__actions .secondary:hover {
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.indicator-builder__preview {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 24px;
+  box-shadow: 0 12px 40px -24px rgba(30, 64, 175, 0.45);
+  display: grid;
+  gap: 18px;
+}
+
+.indicator-builder__preview h3 {
+  margin: 0;
+  color: #1e293b;
+}
+
+.indicator-builder__preview article {
+  display: grid;
+  gap: 12px;
+}
+
+.indicator-builder__preview header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.indicator-builder__preview header h4 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.indicator-builder__badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.indicator-builder__preview p {
+  margin: 0;
+  color: #475569;
+}
+
+.indicator-builder__preview ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #1f2937;
+  display: grid;
+  gap: 6px;
+}
+
+.indicator-builder__list {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.indicator-builder__list h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.indicator-builder__list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 16px;
+}
+
+.indicator-builder__list li {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.indicator-builder__list li h4 {
+  margin: 0;
+  color: #1e293b;
+}
+
+.indicator-builder__list li p {
+  margin: 0;
+  color: #475569;
+}
+
+.indicator-builder__list dl {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.indicator-builder__list dl div {
+  display: flex;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.indicator-builder__list dt {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.indicator-builder__list dd {
+  margin: 0;
+  color: #334155;
+}
+
+.indicator-builder__list button {
+  justify-self: start;
+  border-radius: 999px;
+  border: none;
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.indicator-builder__list button:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.indicator-builder__error {
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+.indicator-builder__input--error {
+  border-color: rgba(220, 38, 38, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+@media (max-width: 960px) {
+  .indicator-builder {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .indicator-builder__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .indicator-builder__form,
+  .indicator-builder__preview {
+    box-shadow: none;
+  }
+}

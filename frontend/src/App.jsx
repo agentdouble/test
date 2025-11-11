@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import FilterPanel from './components/FilterPanel.jsx';
+import IndicatorBuilder from './components/IndicatorBuilder.jsx';
 import KpiCard from './components/KpiCard.jsx';
 import SegmentTable from './components/SegmentTable.jsx';
 import transactions from './data/sampleTransactions.json';
@@ -188,6 +189,8 @@ function App() {
       </header>
 
       <main className="app__content">
+        <IndicatorBuilder />
+
         <section className="app__filters">
           <FilterPanel
             dimensions={DIMENSIONS}
