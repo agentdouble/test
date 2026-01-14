@@ -73,7 +73,7 @@ class Snake:
         for position in self.positions:
             x = position[0] * TAILLE_CELLULE
             y = position[1] * TAILLE_CELLULE
-            couleur = VIOLET
+            couleur = ORANGE
             # Dessin principal
             pygame.draw.rect(ecran, couleur, (x, y, TAILLE_CELLULE, TAILLE_CELLULE))
             # Contour optionnel en gris pour contraster avec le fond noir

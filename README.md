@@ -1,3 +1,3 @@
 # Snake
 - Pygame.
-- Serpent violet.
+- Serpent orange.
