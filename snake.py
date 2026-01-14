@@ -24,7 +24,6 @@ VIOLET = (255, 0, 255)
 ORANGE = (255, 165, 0)
 MARRON = (139, 69, 19)
 GRIS = (60, 60, 60)
-GRIS_CLAIR = (160, 160, 160)
 
 # Directions
 HAUT = (0, -1)
@@ -74,7 +73,7 @@ class Snake:
         for position in self.positions:
             x = position[0] * TAILLE_CELLULE
             y = position[1] * TAILLE_CELLULE
-            couleur = GRIS_CLAIR
+            couleur = VIOLET
             # Dessin principal
             pygame.draw.rect(ecran, couleur, (x, y, TAILLE_CELLULE, TAILLE_CELLULE))
             # Contour optionnel en gris pour contraster avec le fond noir
