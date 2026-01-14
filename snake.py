@@ -1,9 +1,6 @@
 import pygame
 import random
 import sys
-import time
-import colorsys
-import math
 
 # Initialisation de Pygame
 pygame.init()
@@ -27,6 +24,7 @@ VIOLET = (255, 0, 255)
 ORANGE = (255, 165, 0)
 MARRON = (139, 69, 19)
 GRIS = (60, 60, 60)
+GRIS_CLAIR = (160, 160, 160)
 
 # Directions
 HAUT = (0, -1)
@@ -36,29 +34,11 @@ DROITE = (1, 0)
 
 
 class Snake:
-    # Constantes d'animation (éviter les magic numbers)
-    VITESSE_ANIMATION = 0.25  # cycles par seconde
-    DELTA_COULEUR = 0.10      # espacement de teinte entre segments
     AFFICHER_CONTOUR = True   # contour optionnel pour la lisibilité
     def __init__(self):
         self.positions = [(COLONNES // 2, LIGNES // 2)]
         self.direction = DROITE
         self.grandir = False
-        
-    def _couleur_arc_en_ciel(self, index_segment: int, current_time: float | None = None) -> tuple:
-        """Retourne une couleur arc‑en‑ciel (RGB) pour un segment.
-        L'effet est animé dans le temps et décalé par segment.
-        """
-        # Décalage temporel pour l'animation (secondes)
-        if current_time is None:
-            current_time = pygame.time.get_ticks() / 1000.0
-        # Vitesse de rotation des couleurs (cycles par seconde)
-        vitesse = self.VITESSE_ANIMATION
-        # Espacement de teinte entre segments
-        delta = self.DELTA_COULEUR  # 0.0–1.0
-        hue = (index_segment * delta + current_time * vitesse) % 1.0
-        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
-        return (int(r * 255), int(g * 255), int(b * 255))
         
     def bouger(self):
         tete = self.positions[0]
@@ -91,12 +71,10 @@ class Snake:
         self.grandir = True
         
     def dessiner(self, ecran):
-        # Cache la valeur temporelle pour cette frame
-        current_time = pygame.time.get_ticks() / 1000.0
-        for i, position in enumerate(self.positions):
+        for position in self.positions:
             x = position[0] * TAILLE_CELLULE
             y = position[1] * TAILLE_CELLULE
-            couleur = self._couleur_arc_en_ciel(i, current_time)
+            couleur = GRIS_CLAIR
             # Dessin principal
             pygame.draw.rect(ecran, couleur, (x, y, TAILLE_CELLULE, TAILLE_CELLULE))
             # Contour optionnel en gris pour contraster avec le fond noir

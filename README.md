@@ -1,5 +1,3 @@
-# test
-# teste
-# teste
-# test
-# test
+# Snake
+- Pygame.
+- Serpent gris.
