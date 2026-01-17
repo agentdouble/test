@@ -73,6 +73,15 @@ class SnakeSkin:
 
 SNAKE_SKINS: tuple[SnakeSkin, ...] = (
     SnakeSkin(
+        identifiant="orange",
+        nom="Orange",
+        cout=0,
+        apparence="Serpent orange lumineux au style classique.",
+        effet="Teinte unie pour une lisibilite immediate.",
+        couleur_mode="palette",
+        couleurs=((255, 165, 0),),
+    ),
+    SnakeSkin(
         identifiant="arc_en_ciel",
         nom="Arc-en-ciel",
         cout=0,
