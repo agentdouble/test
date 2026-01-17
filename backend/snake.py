@@ -653,6 +653,7 @@ class Jeu:
         self.font = pygame.font.Font(None, 36)
         self.font_moyen = pygame.font.Font(None, 30)
         self.font_petit = pygame.font.Font(None, 24)
+        self.score_bouton_rect = pygame.Rect(LARGEUR - 70, 12, 50, 26)
         self.scores = charger_scores()
         self.meilleur_score = self.scores[0] if self.scores else 0
 
@@ -751,6 +752,17 @@ class Jeu:
     def _dessiner_menu(self) -> None:
         self.ecran.fill((15, 15, 18))
 
+        score_label = self.font_petit.render("Score", True, BLANC)
+        self.ecran.blit(score_label, (40, 12))
+
+        score_valeur = self.font_petit.render(str(self.score), True, BLANC)
+        self.ecran.blit(score_valeur, (40, 34))
+
+        pygame.draw.rect(self.ecran, GRIS, self.score_bouton_rect, border_radius=6)
+        bouton_score = self.font_petit.render("+1", True, BLANC)
+        rect_score = bouton_score.get_rect(center=self.score_bouton_rect.center)
+        self.ecran.blit(bouton_score, rect_score)
+
         titre = self.font_moyen.render("Sélection des serpents", True, BLANC)
         self.ecran.blit(titre, titre.get_rect(center=(LARGEUR // 2, 30)))
 
@@ -833,6 +845,10 @@ class Jeu:
         for evenement in pygame.event.get():
             if evenement.type == pygame.QUIT:
                 return False
+            elif evenement.type == pygame.MOUSEBUTTONDOWN:
+                if evenement.button == 1 and self.etat == "menu":
+                    if self.score_bouton_rect.collidepoint(evenement.pos):
+                        self.score += 1
             elif evenement.type == pygame.KEYDOWN:
                 if self.etat == "menu":
                     if evenement.key in (pygame.K_UP, pygame.K_w):
