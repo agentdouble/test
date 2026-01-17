@@ -24,6 +24,9 @@ DOSSIER_DONNEES = Path(__file__).resolve().parent / "data"
 FICHIER_SCORES = DOSSIER_DONNEES / "scores.json"
 FICHIER_SERPENTS = DOSSIER_DONNEES / "skins.json"
 NB_SCORES_AFFICHES = 5
+DOSSIER_ASSETS = Path(__file__).resolve().parent.parent / "assets"
+FICHIER_SON_MANGER = DOSSIER_ASSETS / "manger.wav"
+FICHIER_SON_COLLISION = DOSSIER_ASSETS / "collision.wav"
 
 
 def charger_scores(fichier: Path = FICHIER_SCORES) -> list[int]:
@@ -682,6 +685,9 @@ class Jeu:
         self.frame_count = 0
         self.score_enregistre = False
         self.etat = "menu"
+        self.son_manger: pygame.mixer.Sound | None = None
+        self.son_collision: pygame.mixer.Sound | None = None
+        self._initialiser_audio()
 
     def _trouver_index_skin(self, identifiant: str) -> int:
         for index, skin in enumerate(SNAKE_SKINS):
@@ -748,6 +754,37 @@ class Jeu:
         self.snake = None
         self.nourriture = None
         self.bonus = None
+
+    def _initialiser_audio(self) -> None:
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+        except pygame.error:
+            return
+
+        self.son_manger = self._charger_son(FICHIER_SON_MANGER)
+        self.son_collision = self._charger_son(FICHIER_SON_COLLISION)
+
+    def _charger_son(self, chemin: Path) -> pygame.mixer.Sound | None:
+        if not chemin.exists():
+            return None
+        try:
+            return pygame.mixer.Sound(str(chemin))
+        except (pygame.error, OSError):
+            return None
+
+    def _jouer_son(self, son: pygame.mixer.Sound | None) -> None:
+        if not son:
+            return
+        try:
+            son.play()
+        except pygame.error:
+            return
+
+    def _declencher_game_over(self) -> None:
+        self.etat = "game_over"
+        self._enregistrer_score_si_necessaire()
+        self._jouer_son(self.son_collision)
 
     def _dessiner_menu(self) -> None:
         self.ecran.fill((15, 15, 18))
@@ -909,14 +946,12 @@ class Jeu:
         # Mouvement du serpent
         if not self.snake.bouger():
             if not self.invincible:
-                self.etat = "game_over"
-                self._enregistrer_score_si_necessaire()
+                self._declencher_game_over()
                 return
             # En mode invincible, téléporter de l'autre côté
             tete = self.snake.positions[0]
             if tete in self.snake.positions[1:]:
-                self.etat = "game_over"
-                self._enregistrer_score_si_necessaire()
+                self._declencher_game_over()
                 return
             nouvelle_tete = list(tete)
             if tete[0] < 0:
@@ -932,6 +967,7 @@ class Jeu:
         # Vérifier si le serpent mange la nourriture
         if self.snake.positions[0] == self.nourriture.position:
             self.snake.manger()
+            self._jouer_son(self.son_manger)
             self.score += 10 * self.multiplicateur_score
 
             # Augmenter le niveau tous les 50 points
