@@ -1,7 +1,12 @@
 {
   "achetes": [
     "arc_en_ciel",
-    "orange"
+    "orange",
+    "foret_de_jade",
+    "ocean_profond",
+    "nocturne",
+    "magma",
+    "desert_royal"
   ],
-  "actif": "arc_en_ciel"
+  "actif": "nocturne"
 }
