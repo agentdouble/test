@@ -1,5 +1,6 @@
-# test
-# teste
-# teste
-# test
-# test
+# Snake
+- Pygame.
+- Serpent orange.
+- Logo: assets/snake-icon.svg.
+- Score à l'écran avec bouton +1.
+- Sons: assets/manger.wav, assets/collision.wav.
